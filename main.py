@@ -156,9 +156,9 @@ st.markdown("""
 
 df_survival = df_plot.groupby(["Intervalo entre Dias"])[["Usuário"]].count()
 df_survival = df_survival.reset_index(drop=False).rename(columns={"Usuário": "Quantidade Usuários"}).sort_values(by="Intervalo entre Dias")
-df_survival["Qtde Acumumulada"] = df_survival["Quantidade Usuários"].cumsum()
-df_survival["Prob Acumumulada"] = (df_survival["Qtde Acumumulada"] / df_survival["Quantidade Usuários"].sum()).round(4)
-st.line_chart(df_survival, x="Intervalo entre Dias", y="Prob Acumumulada", width='stretch')
+df_survival["Qtde Acumulada"] = df_survival["Quantidade Usuários"].cumsum()
+df_survival["Prob Acumulada"] = (df_survival["Qtde Acumulada"] / df_survival["Quantidade Usuários"].sum()).round(4)
+st.line_chart(df_survival, x="Intervalo entre Dias", y="Prob Acumulada", width='stretch')
 
 st.markdown("""
 Nossa curva apresenta um crescimento bem rápido. Isso significa que nossos usuários tem uma alta probabilidade de se manterem ativos, são recorrentes em um período curto.
