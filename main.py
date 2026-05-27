@@ -36,10 +36,17 @@ def load_data():
 
     df_analytics = (df_predictions.merge(df_features, on="ID Usuário")
                             .merge(df_customers, on="ID Usuário")
-                            .rename(columns={"qtdetransacaod28": "Frequência", "qtdepontosposd28": "Valor", "desclifecycleatual":"Ciclo de Vida Atual"})
-                            )
+                            .rename(columns={
+                                "qtdetransacaod28": "Frequência",
+                                "qtdepontosposd28": "Valor",
+                                "desclifecycleatual":"Ciclo de Vida Atual",
+                                "avgintervalodiasvida": "Intervalo entre Dias"
+                            })
+                    )
     
-    df_ranking = (df_analytics[["Usuário", "Prob. Fiel", "Saldo Pontos", "Frequência", "Valor", "Ciclo de Vida Atual"]]
+    columns = ["Usuário", "Prob. Fiel", "Saldo Pontos", "Frequência", "Valor", "Intervalo entre Dias", "Ciclo de Vida Atual"]
+    
+    df_ranking = (df_analytics[columns]
                             .sort_values(by="Prob. Fiel", ascending=False)
                             .drop(columns=["Prob. Fiel"])
                             )
@@ -96,7 +103,7 @@ Tanto o chat de nossas [transmissões na Twitch](https://twitch.tv/teomewhy), qu
 
 df_analytics, df_ranking = load_data()
 
-st.dataframe(df_ranking, hide_index=True)
+st.dataframe(df_ranking, hide_index=True, height=250)
 
 
 st.markdown("""
@@ -119,6 +126,9 @@ else:
 
 df_plot = df_plot[df_plot["Usuário"].fillna("") != ""]
 
+col1, col2 = st.columns(2)
+
+
 chart = alt.Chart(df_plot).mark_circle().encode(
     x='Frequência',
     y='Valor',
@@ -126,9 +136,34 @@ chart = alt.Chart(df_plot).mark_circle().encode(
     size=alt.value(100)
 )
 
-col1, col2 = st.columns(2)
-
 col1.altair_chart(chart, use_container_width=True)
+col1.markdown("""
+- Cada ponto é um usuário;
+- Quanto mais à direita, mais frequente é a sua participação, com muita interação durante as lives e na plataforma de cursos;
+- Quanto mais acima, maior o valor de pontos acumulados, provável que está farmando produtos mais valiosos, como streak de presença;              
+""")
 
 ciclo_vida_group = df_plot.groupby("Ciclo de Vida Atual").count()[["Usuário"]].reset_index().rename(columns={"Usuário": "Quantidade Usuários"})
 col2.bar_chart(ciclo_vida_group, x="Ciclo de Vida Atual", y="Quantidade Usuários")
+col2.markdown("""
+Distribuição dos usuário pelos ciclos de vida presentes. Essa regra se dá apenas pela recência e pela idade na base, ou seja, tempo desde a última interação e tempos desde a primeira interação.
+             
+""")
+
+st.markdown("""
+#### Curva de Recorrência
+""")
+
+df_survival = df_plot.groupby(["Intervalo entre Dias"])[["Usuário"]].count()
+df_survival = df_survival.reset_index(drop=False).rename(columns={"Usuário": "Quantidade Usuários"}).sort_values(by="Intervalo entre Dias")
+df_survival["Qtde Acumumulada"] = df_survival["Quantidade Usuários"].cumsum()
+df_survival["Prob Acumumulada"] = (df_survival["Qtde Acumumulada"] / df_survival["Quantidade Usuários"].sum()).round(4)
+st.line_chart(df_survival, x="Intervalo entre Dias", y="Prob Acumumulada", width='stretch')
+
+st.markdown("""
+Nossa curva apresenta um crescimento bem rápido. Isso significa que nossos usuários tem uma alta probabilidade de se manterem ativos, são recorrentes em um período curto.
+
+Metade de nossa base volta (em média) antes de 9 dias, e 80% voltam antes de 30 dias.
+
+* Desconsideramos da análise usuários que tiveram apenas 1 dia de atividade, ou seja, aqueles que não tiveram uma segunda interação, pois não conseguimos calcular o intervalo entre dias para esses casos.
+""")
